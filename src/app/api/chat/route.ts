@@ -12,11 +12,13 @@ export async function POST(req: Request) {
     return result.toDataStreamResponse({
       headers: { "Content-Type": "text/event-stream" }
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in chat route:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    let message = "Unknown error"
+    if (error instanceof Error) message = error.message
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+      headers: { "Content-Type": "application/json" }
+    })
   }
 }

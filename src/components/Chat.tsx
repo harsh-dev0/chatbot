@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect, FormEvent, MouseEvent } from "react"
 import { useChat } from "@ai-sdk/react"
 
 const Chat: React.FC = () => {
@@ -8,33 +8,42 @@ const Chat: React.FC = () => {
     input,
     handleInputChange,
     handleSubmit,
-    status,
+    isLoading,
     error,
     reload,
     stop,
   } = useChat()
   const [localError, setLocalError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     setLocalError(null)
     try {
       await handleSubmit(e)
-    } catch (err: any) {
-      setLocalError(err?.message || "Unknown error")
+      inputRef.current?.focus()
+    } catch (err: unknown) {
+      if (err instanceof Error) setLocalError(err.message)
+      else setLocalError("Unknown error")
+      inputRef.current?.focus()
     }
   }
-  const handleReload = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleReload = (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
     reload()
+    inputRef.current?.focus()
   }
-  const handleStop = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleStop = (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
     stop()
+    inputRef.current?.focus()
   }
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages, status])
+  }, [messages, isLoading])
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
 
   return (
     <div className="fixed inset-0 w-full h-full bg-gray-100 text-black transition-colors duration-200 flex flex-col">
@@ -56,7 +65,7 @@ const Chat: React.FC = () => {
               {message.content}
             </div>
           ))}
-          {(status === "streaming" || status === "submitted") && <p className="text-gray-500">AI is typing...</p>}
+          {isLoading && <p className="text-gray-500">AI is typing...</p>}
           <div ref={messagesEndRef} />
         </div>
         {(error || localError) && (
@@ -68,18 +77,19 @@ const Chat: React.FC = () => {
         )}
         <form onSubmit={onSubmit} className="flex p-4 bg-white border-t border-gray-300">
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={handleInputChange}
             placeholder="Type your message..."
             className="flex-1 p-2 border rounded-l bg-gray-100 text-black focus:outline-none focus:ring-2 focus:ring-blue-400"
-            disabled={status === "streaming" || status === "submitted"}
+            disabled={isLoading}
             autoFocus
           />
           <button
             type="submit"
-            disabled={status === "streaming" || status === "submitted" || !input.trim()}
-            className="px-4 py-2 bg-blue-500 text-white rounded-r hover:bg-blue-600 disabled:bg-gray-400 transition-colors duration-100"
+            disabled={isLoading || !input.trim()}
+            className="px-4 py-2 bg-blue-500 text-white rounded-r hover:bg-blue-600 disabled:bg-gray-400"
           >
             Send
           </button>
